@@ -18,6 +18,6 @@
 <script>window.batcPillInlineCss = " "; /* the <link> above already loads pill.css */</script>
 <script src="../../src/html_ui/paul-batc-pill/pill.js"></script>
 <script>
-  // open the card the way a click does; the pill switches to its sample ATC state
-  setTimeout(function () { document.getElementById("batc-pill").click(); }, 300);
+  // open the card as the panel's gear does; the pill switches to its sample ATC state
+  setTimeout(function () { batcPill.settings(true); }, 300);
 </script>

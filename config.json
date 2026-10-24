@@ -2,7 +2,7 @@
   "package_name": "paul-batc-pill",
   "title": "BATC Comms Pill",
   "creator": "Paul Charpentier",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "_paths": "Set sim_packages (the sim's own Content/Packages folder, which holds fs-base-ui) and community in .local/config.json, which overrides this file.",
   "sim_packages": "",
   "community": ""

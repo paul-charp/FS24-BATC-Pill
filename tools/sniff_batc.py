@@ -1,9 +1,11 @@
 """Log every message from BeyondATC's toolbar socket (ws://127.0.0.1:41716) with timestamps. Stdlib only.
 
-    python tools/sniff_batc.py                 log until Ctrl+C to logs/batc-<date>.jsonl and the console
+    python tools/sniff_batc.py                 log until Ctrl+C to batc-<date>.jsonl in the logs folder
+                                               (%LOCALAPPDATA%\\paul-batc-pill\\logs) and the console
     python tools/sniff_batc.py --seconds 90 --quiet-snapshot
 
-Read-only: it never sends anything; BeyondATC pushes its state on connect.
+Read-only: it sends no messages (only the protocol's pong replies to pings); BeyondATC pushes its
+state on connect.
 """
 import argparse
 import json
@@ -14,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import inspect_ui  # noqa: E402  (reuses its minimal WebSocket client)
+import pill_log  # noqa: E402  (the logs folder all tools share)
 
 NOISY = ("DATIS", "Settings", "Actions", "InfoBoxes", "Progress", "FrameSync", "Pong", "Frequencies")
 
@@ -26,8 +29,9 @@ def main():
 
     inspect_ui.HOST, inspect_ui.PORT = "127.0.0.1", 41716
     ws = inspect_ui.WS("/")
-    logs = Path(__file__).resolve().parent.parent / "logs"
-    logs.mkdir(exist_ok=True)
+    ws.sock.settimeout(None)  # quiet stretches are normal; only --seconds sets a deadline
+    logs = pill_log.log_dir()
+    logs.mkdir(parents=True, exist_ok=True)
     out = logs / f"batc-{time.strftime('%Y%m%d-%H%M%S')}.jsonl"
     t0 = time.monotonic()
     print(f"sniff: logging to {out}")
@@ -40,8 +44,8 @@ def main():
                     msg = ws.recv()
                 except socket.timeout:
                     break
-                except ConnectionError:
-                    print("sniff: BeyondATC closed the socket")
+                except ConnectionError as e:
+                    print(f"sniff: BeyondATC closed the socket ({e})")
                     break
                 t = time.monotonic() - t0
                 f.write(json.dumps({"t": round(t, 3), "msg": msg}, ensure_ascii=False) + "\n")

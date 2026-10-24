@@ -3,7 +3,7 @@
   --u: 0.0926vh; /* pill.js sets it from CONFIG.scale; position comes from CONFIG.corner/x/y */
 
   --bg: rgba(14, 18, 24, 0.62);
-  --edge: rgba(255, 255, 255, 0.08);
+  --edge: rgba(0, 0, 0, 0.1); /* a dark rim: softens the rounded edges on bright scenery */
   --fg: rgba(236, 241, 246, 0.92);
   --dim: rgba(236, 241, 246, 0.55);
   --c: #8b97a3;
@@ -16,12 +16,12 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  /* Gameface clips rounded overflow without antialiasing, so the pill clips square and the rounded
+     background + border live on .bp-bg, which isn't clipped */
   overflow: hidden;
   box-sizing: border-box;
   height: calc(26 * var(--u));
-  border-radius: calc(13 * var(--u));
-  background-color: var(--bg);
-  border: calc(1 * var(--u)) solid var(--edge);
+  --r: calc(13 * var(--u)); /* corner radius, drawn by .bp-bg */
 
   color: var(--fg);
   font-size: calc(12 * var(--u));
@@ -35,9 +35,21 @@
   transition:
     width 0.38s var(--ease),
     height 0.38s var(--ease),
-    border-radius 0.38s var(--ease),
     opacity 0.3s ease,
     transform 0.38s var(--ease);
+}
+
+#batc-pill .bp-bg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  border-radius: var(--r);
+  background-color: var(--bg);
+  border: calc(1 * var(--u)) solid var(--edge);
+  transition: border-radius 0.38s var(--ease), background-color 0.2s ease, border-color 0.3s ease;
 }
 
 #batc-pill.is-hidden {
@@ -51,28 +63,57 @@
 /* idle: collapsed to a dot */
 #batc-pill.is-dot {
   height: calc(14 * var(--u));
-  border-radius: calc(7 * var(--u));
+  --r: calc(7 * var(--u));
   opacity: 0.8;
 }
 #batc-pill.is-ghost { opacity: 0.55; }
+/* the dot and ghost set their own opacity: hidden must still win (the dot stayed in the menus) */
+#batc-pill.is-dot.is-hidden, #batc-pill.is-ghost.is-hidden { opacity: 0; }
 
 #batc-pill .bp-body {
+  position: relative;
   display: flex;
   align-items: center;
   flex: none;
-  padding: 0 calc(11 * var(--u)) 0 calc(9 * var(--u));
+  padding: 0 calc(12 * var(--u)) 0 calc(10 * var(--u)); /* includes .bp-bg's 1-unit border */
   opacity: 1;
   transform: translateY(0);
   transition: opacity 0.18s ease, transform 0.22s var(--ease);
 }
-#batc-pill.is-dot .bp-body { padding: 0 calc(3 * var(--u)); }
+#batc-pill.is-dot .bp-body { padding: 0 calc(4 * var(--u)); }
 #batc-pill .bp-body.is-out {
   opacity: 0;
   transform: translateY(calc(4 * var(--u)));
 }
 
-#batc-pill .bp-body > * { margin-left: calc(6 * var(--u)); flex: none; }
-#batc-pill .bp-body > *:first-child { margin-left: 0; }
+#batc-pill .bp-body > *, #batc-pill .bp-head > * { margin-left: calc(6 * var(--u)); flex: none; }
+#batc-pill .bp-body > *:first-child, #batc-pill .bp-head > *:first-child { margin-left: 0; }
+
+/* readback pending with clearance boxes: a header row over the boxes (height set by pill.js) */
+/* even padding on all sides; corner radius = box radius (5) + padding (8), like the 13 of the pill */
+#batc-pill.is-msg { align-items: flex-start; --r: calc(13 * var(--u)); }
+#batc-pill.is-msg .bp-body {
+  display: block;
+  padding: calc(8 * var(--u));
+}
+#batc-pill .bp-head { display: flex; align-items: center; height: calc(12 * var(--u)); padding-left: calc(3 * var(--u)); }
+#batc-pill .bp-body > .bp-boxes { margin-left: 0; } /* not the row spacing of .bp-body > * */
+#batc-pill .bp-boxes { display: flex; margin-top: calc(7 * var(--u)); }
+#batc-pill .bp-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 auto;
+  margin-left: calc(4 * var(--u));
+  padding: calc(4 * var(--u)) calc(8 * var(--u)) calc(5 * var(--u));
+  border-radius: calc(5 * var(--u));
+  background-color: rgba(255, 255, 255, 0.08);
+}
+#batc-pill .bp-box:first-child { margin-left: 0; }
+#batc-pill .bp-box-t, #batc-pill .bp-box-v { text-align: center; }
+#batc-pill .bp-box-t { font-size: calc(9 * var(--u)); font-weight: 500; color: var(--dim); }
+#batc-pill .bp-box-v { margin-top: calc(3 * var(--u)); font-size: calc(13 * var(--u)); }
+#batc-pill .bp-dim { color: var(--dim); font-weight: 500; }
 
 #batc-pill .bp-freq {
   font-size: calc(11 * var(--u));
@@ -89,6 +130,40 @@
 #batc-pill.s-you  { --c: #5fd38d; }
 #batc-pill.s-err  { --c: #ff6b6b; }
 #batc-pill.s-tune { --c: #63d3e6; }
+#batc-pill.s-insist { --c: #ff7a45; }
+#batc-pill.s-atis  { --c: #b48cff; }
+#batc-pill.s-ok    { --c: #5fd38d; }
+#batc-pill.s-ok .bp-bg { border-color: var(--c); }
+/* the last reply ATC took, kept (keepLast): quieter than any live state */
+#batc-pill.s-pin { --c: rgba(236, 241, 246, 0.6); color: rgba(236, 241, 246, 0.78); }
+#batc-pill.s-pin .bp-bg { background-color: rgba(14, 18, 24, 0.5); }
+#batc-pill .bp-unpin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(16 * var(--u));
+  height: calc(16 * var(--u));
+  border-radius: 50%;
+  color: var(--c);
+  pointer-events: auto; /* the one child that takes clicks: it hides the kept clearance */
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+/* as far from the side as from the top/bottom, so the circle sits centred in the pill's rounded corner (one
+   line: 5 units each; over the boxes: 6). Beats the first-child margin reset of .bp-body / .bp-head */
+#batc-pill .bp-body > .bp-unpin:first-child, #batc-pill .bp-head > .bp-unpin:first-child { margin-left: calc(-5 * var(--u)); }
+/* one icon shown at a time, centred by the circle's flex (as the settings close button, which the sim centres
+   correctly; absolutely placed icons came out off-centre there) */
+#batc-pill .bp-unpin svg { display: block; flex: none; }
+#batc-pill .bp-unpin .bp-clip { width: calc(12 * var(--u)); height: calc(12 * var(--u)); }
+#batc-pill .bp-unpin .bp-x { width: calc(9 * var(--u)); height: calc(9 * var(--u)); display: none; }
+/* hover: the icon turns into a ✕, same circle, so nothing moves */
+#batc-pill[data-input-group]:hover .bp-unpin { background-color: rgba(255, 255, 255, 0.16); color: #ffffff; }
+#batc-pill[data-input-group]:hover .bp-unpin .bp-clip { display: none; }
+#batc-pill[data-input-group]:hover .bp-unpin .bp-x { display: block; }
+#batc-pill .bp-unpin:hover { background-color: rgba(255, 255, 255, 0.28); }
+#batc-pill.s-insist .bp-bg { border-color: var(--c); }
+#batc-pill.s-insist .bp-lamp { animation-duration: 0.7s; }
 
 /* lamp */
 #batc-pill .bp-lamp {
@@ -154,19 +229,90 @@
   height: calc(12 * var(--u));
   color: var(--dim);
 }
-#batc-pill .bp-radio { color: var(--c); transition: color 0.3s ease; }
+#batc-pill .bp-radio, #batc-pill .bp-mic { color: var(--c); transition: color 0.3s ease; }
+/* ATC took your reply: a green tick in the lamp's place ("Readback OK") */
+#batc-pill .bp-check { color: #5fd38d; animation: bp-pop 0.35s var(--ease); }
+@keyframes bp-pop {
+  0% { opacity: 0; transform: scale(0.4); }
+  100% { opacity: 1; transform: scale(1); }
+}
+/* ATC calling while COM1 is muted: the speaker icon is the message */
+#batc-pill.is-muted .bp-ico {
+  width: calc(15 * var(--u));
+  height: calc(15 * var(--u));
+  color: var(--c);
+  animation: bp-pulse 0.9s ease-in-out infinite;
+}
 
 /* The sim only routes a click to the element directly under the cursor if that element has
    data-input-group, so let clicks fall through the pill's children to the pill itself. */
 #batc-pill * { pointer-events: none; }
-#batc-pill[data-input-group]:hover { background-color: rgba(14, 18, 24, 0.78); }
+#batc-pill[data-input-group]:hover .bp-bg { background-color: rgba(14, 18, 24, 0.78); }
 #batc-pill.is-dot[data-input-group]:hover { opacity: 1; }
+
+/* ---- BeyondATC switches (on hover): on the pill's row, toward the screen center ---- */
+#batc-pill-sw {
+  --k: 0.0926vh;
+  --on: #63d3e6;
+  position: absolute;
+  z-index: 9999;
+  display: flex;
+  flex-direction: row-reverse;
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+  /* left/right follow the pill's width as it animates (pill.js places them by its target width) */
+  transition: opacity 0.18s ease, transform 0.25s cubic-bezier(0.22, 0.8, 0.24, 1), visibility 0s,
+    left 0.38s cubic-bezier(0.22, 0.8, 0.24, 1), right 0.38s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+#batc-pill-sw[data-side="left"] { flex-direction: row; }
+#batc-pill-sw.is-closed {
+  opacity: 0;
+  transform: translateX(calc(6 * var(--k)));
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.18s ease, transform 0.25s ease, visibility 0s linear 0.25s;
+}
+#batc-pill-sw[data-side="left"].is-closed { transform: translateX(calc(-6 * var(--k))); }
+#batc-pill-sw .bs-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: calc(26 * var(--k));
+  height: calc(26 * var(--k));
+  margin-left: calc(5 * var(--k));
+  border-radius: 50%;
+  border: calc(1 * var(--k)) solid rgba(0, 0, 0, 0.1);
+  background-color: rgba(14, 18, 24, 0.78);
+  color: rgba(236, 241, 246, 0.45);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+#batc-pill-sw .bs-btn:first-child { margin-left: 0; }
+#batc-pill-sw .bs-btn:hover { background-color: rgba(30, 36, 44, 0.9); }
+#batc-pill-sw .bs-btn svg { display: block; width: calc(14 * var(--k)); height: calc(14 * var(--k)); }
+/* same outline either way (a lit outline made the "on" button look bigger): the fill and icon say "on" */
+#batc-pill-sw .bs-btn.is-on { color: var(--on); background-color: rgba(20, 52, 60, 0.85); }
+#batc-pill-sw .bs-btn.is-on:hover { background-color: rgba(28, 66, 76, 0.9); }
+#batc-pill-sw .bs-btn.is-on .bs-slash { display: none; }
+
+/* ---- click-catcher behind the open settings card: a click outside closes the card ---- */
+#batc-pill-shade {
+  position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; /* the whole screen, whatever body's size */
+  z-index: 9998; /* under the pill and the card (9999) */
+  background-color: transparent;
+  pointer-events: auto;
+}
+#batc-pill-shade.is-closed { display: none; }
 
 /* ---- settings card (opens on pill click) ---- */
 #batc-pill-cfg {
   --k: 0.0926vh;
   --bg: rgba(14, 18, 24, 0.86);
   --edge: rgba(255, 255, 255, 0.1);
+  --rim: rgba(0, 0, 0, 0.1);
   --fg: rgba(236, 241, 246, 0.92);
   --dim: rgba(236, 241, 246, 0.55);
   --btn: rgba(255, 255, 255, 0.07);
@@ -181,7 +327,7 @@
   padding: calc(10 * var(--k)) calc(12 * var(--k)) calc(12 * var(--k));
   border-radius: calc(10 * var(--k));
   background-color: var(--bg);
-  border: calc(1 * var(--k)) solid var(--edge);
+  border: calc(1 * var(--k)) solid var(--rim);
   color: var(--fg);
   font-size: calc(12 * var(--k));
   font-weight: 600;
@@ -191,14 +337,16 @@
   transform: translateY(0) scale(1);
   visibility: visible;
   pointer-events: auto;
-  transition: opacity 0.22s ease, transform 0.3s var(--ease), visibility 0s;
+  transition: opacity 0.22s ease, transform 0.3s var(--ease), visibility 0s,
+    top 0.38s var(--ease), bottom 0.38s var(--ease);
 }
 #batc-pill-cfg.is-closed {
   opacity: 0;
   transform: translateY(calc(-6 * var(--k))) scale(0.97);
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.22s ease, transform 0.3s var(--ease), visibility 0s linear 0.3s;
+  transition: opacity 0.22s ease, transform 0.3s var(--ease), visibility 0s linear 0.3s,
+    top 0.38s var(--ease), bottom 0.38s var(--ease);
 }
 #batc-pill-cfg[data-edge="bottom"].is-closed { transform: translateY(calc(6 * var(--k))) scale(0.97); }
 
@@ -215,8 +363,12 @@
 #batc-pill-cfg .bc-btn { cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease; }
 
 #batc-pill-cfg .bc-x {
-  width: calc(20 * var(--k)); height: calc(20 * var(--k)); line-height: calc(20 * var(--k));
-  text-align: center; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  width: calc(20 * var(--k)); height: calc(20 * var(--k)); border-radius: 50%;
+}
+#batc-pill-cfg .bc-x svg {
+  width: calc(9 * var(--k)); height: calc(9 * var(--k));
+  fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round;
 }
 #batc-pill-cfg .bc-x:hover { background-color: var(--btn-hover); color: var(--fg); }
 
@@ -254,6 +406,23 @@
 }
 
 #batc-pill-cfg .bc-toggle:hover .bc-label { color: #ffffff; }
+
+#batc-pill-cfg .bc-choice { transition: opacity 0.2s ease; }
+#batc-pill-cfg .bc-choice.is-off { opacity: 0.4; }
+#batc-pill-cfg .bc-seg { display: flex; width: 100%; padding-left: calc(12 * var(--k)); } /* under Readback hints */
+#batc-pill-cfg .bc-seg .bc-btn {
+  flex: 1 1 0;
+  text-align: center;
+  margin-left: calc(2 * var(--k));
+  padding: calc(4 * var(--k)) calc(7 * var(--k));
+  border-radius: calc(5 * var(--k));
+  background-color: var(--btn);
+  color: var(--dim);
+  font-size: calc(11 * var(--k));
+}
+#batc-pill-cfg .bc-seg .bc-btn:first-child { margin-left: 0; }
+#batc-pill-cfg .bc-seg .bc-btn:hover { background-color: var(--btn-hover); color: var(--fg); }
+#batc-pill-cfg .bc-seg .bc-btn.is-on { background-color: var(--on); color: #0e1218; }
 #batc-pill-cfg .bc-sw {
   position: relative; box-sizing: border-box;
   width: calc(28 * var(--k)); height: calc(16 * var(--k));
@@ -269,6 +438,29 @@
 #batc-pill-cfg .bc-toggle.is-on .bc-sw { background-color: var(--on); }
 #batc-pill-cfg .bc-toggle.is-on .bc-sw i { transform: translateX(calc(12 * var(--k))); background-color: #0e1218; }
 
+#batc-pill-cfg .bc-tabs { display: flex; margin: calc(2 * var(--k)) 0 calc(6 * var(--k)); }
+#batc-pill-cfg .bc-tab {
+  flex: 1 1 0;
+  margin-left: calc(2 * var(--k));
+  padding: calc(5 * var(--k)) 0;
+  border-radius: calc(5 * var(--k));
+  background-color: var(--btn);
+  color: var(--dim);
+  text-align: center;
+}
+#batc-pill-cfg .bc-tab:first-child { margin-left: 0; }
+#batc-pill-cfg .bc-tab:hover { background-color: var(--btn-hover); color: var(--fg); }
+#batc-pill-cfg .bc-tab.is-on { background-color: var(--on); color: #0e1218; }
+#batc-pill-cfg .bc-pane.is-away { display: none; }
+#batc-pill-cfg .bc-note {
+  margin: calc(-3 * var(--k)) 0 calc(3 * var(--k));
+  padding-left: calc(12 * var(--k));
+  color: var(--dim);
+  font-size: calc(10 * var(--k));
+  font-weight: 500;
+  line-height: 1.3;
+}
+
 #batc-pill-cfg .bc-foot {
   display: flex; justify-content: flex-end;
   margin-top: calc(6 * var(--k)); padding-top: calc(8 * var(--k));
@@ -279,3 +471,231 @@
   background-color: var(--btn); color: var(--dim);
 }
 #batc-pill-cfg .bc-reset:hover { background-color: var(--btn-hover); color: var(--fg); }
+
+/* ---- comms: ATC's messages under the pill, the answers/requests column, the Frequencies/Log panel ----
+   --u is set by pill.js like the pill's. Bottom corners stack upward,
+   left corners mirror. */
+#batc-pill-msgs, #batc-pill-list, #batc-pill-panel {
+  --u: 0.0926vh;
+  --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --on: #63d3e6;
+  position: absolute;
+  z-index: 9997;
+}
+
+#batc-pill-msgs {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: calc(380 * var(--u));
+  pointer-events: none; /* only the chips take clicks */
+}
+#batc-pill-msgs[data-side="left"] { align-items: flex-start; }
+/* each message is a slot that opens and closes its height (and gap) so the others glide */
+.bm-cap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* the box keeps its width when its row opens */
+  max-width: 100%;
+  overflow: hidden;
+  padding-top: calc(6 * var(--u));
+  transition: height 0.42s var(--ease), padding-top 0.42s var(--ease);
+}
+#batc-pill-msgs[data-side="left"] .bm-cap { align-items: flex-start; }
+.bm-card {
+  padding: calc(5 * var(--u)) calc(9 * var(--u)) calc(6 * var(--u));
+  border-radius: calc(7 * var(--u));
+  background-color: rgba(14, 18, 24, 0.4);
+  border: calc(1 * var(--u)) solid rgba(0, 0, 0, 0.1);
+  color: rgba(236, 241, 246, 0.9);
+  font-size: calc(12.5 * var(--u));
+  line-height: 1.36;
+  text-shadow: 0 0 calc(10 * var(--u)) rgba(0, 0, 0, 0.22);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.42s var(--ease), border-color 0.3s ease, background-color 0.3s ease;
+}
+.bm-cap.is-out { padding-top: 0; }
+.bm-cap.is-out .bm-card { opacity: 0; transform: translateY(calc(6 * var(--u))); }
+.bm-cap.is-leaving .bm-card { transform: translateY(calc(-6 * var(--u))); }
+.bm-who {
+  display: block;
+  margin-bottom: calc(1 * var(--u));
+  font-size: calc(9.5 * var(--u));
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bm-you .bm-who { color: #5fd38d; }
+.bm-traffic .bm-who { color: rgba(236, 241, 246, 0.62); }
+.bm-traffic .bm-card { color: rgba(236, 241, 246, 0.72); background-color: rgba(14, 18, 24, 0.28); }
+/* the message ATC waits on */
+.bm-cap.is-pinned .bm-card { border-color: rgba(255, 181, 71, 0.5); background-color: rgba(14, 18, 24, 0.48); }
+/* a long list opened with "+N" (route fixes, 74 gates) scrolls past about six rows */
+.bm-acts {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; padding-top: calc(3 * var(--u));
+  max-height: calc(165 * var(--u)); overflow-y: auto; pointer-events: auto;
+  opacity: 1; transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.3s var(--ease);
+}
+.bm-acts.is-out { opacity: 0; transform: translateY(calc(-4 * var(--u))); pointer-events: none; }
+#batc-pill-msgs[data-side="left"] .bm-acts { justify-content: flex-start; }
+
+/* chips: answers, requests, "+N", "Tune" */
+.bm-chip {
+  display: flex;
+  align-items: center;
+  height: calc(24 * var(--u));
+  padding: 0 calc(10 * var(--u));
+  margin: calc(3 * var(--u)) 0 0 calc(4 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background-color: rgba(14, 18, 24, 0.78);
+  border: calc(1 * var(--u)) solid rgba(0, 0, 0, 0.1);
+  color: rgba(236, 241, 246, 0.92);
+  font-size: calc(11.5 * var(--u));
+  font-weight: 600;
+  white-space: nowrap;
+  text-shadow: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+#batc-pill-msgs[data-side="left"] .bm-chip { margin: calc(3 * var(--u)) calc(4 * var(--u)) 0 0; }
+.bm-chip:hover { background-color: rgba(30, 36, 44, 0.92); }
+.bm-chip.is-primary { background-color: #ffb547; border-color: #ffb547; color: #15110a; }
+.bm-chip.is-primary:hover { background-color: #ffc56e; }
+.bm-chip.is-quiet { color: rgba(236, 241, 246, 0.6); }
+.bm-chip.is-tune { color: #63d3e6; border-color: rgba(99, 211, 230, 0.55); }
+.bm-chip.is-tune:hover { background-color: rgba(20, 52, 60, 0.9); }
+.bm-chip.is-busy { opacity: 0.4; pointer-events: none; }
+
+/* the column under the pill: requests, answers (no message on screen), "Tune" */
+#batc-pill-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.18s ease, transform 0.25s var(--ease);
+}
+#batc-pill-list[data-side="left"] { align-items: flex-start; }
+#batc-pill-list { max-height: calc(330 * var(--u)); overflow-y: auto; }
+#batc-pill-list[data-edge="bottom"] { flex-direction: column-reverse; } /* the first one nearest the pill */
+#batc-pill-list.is-closed { opacity: 0; transform: translateY(calc(-4 * var(--u))); pointer-events: none; }
+#batc-pill-list .bm-chip { margin: 0 0 calc(4 * var(--u)) 0; }
+#batc-pill-list[data-edge="bottom"] .bm-chip { margin: calc(4 * var(--u)) 0 0 0; }
+
+/* the panel: Frequencies and Log. Not modal (no shade): left open in flight, the cockpit stays clickable */
+#batc-pill-panel {
+  --btn: rgba(255, 255, 255, 0.07);
+  --btn-hover: rgba(255, 255, 255, 0.14);
+  --dim: rgba(236, 241, 246, 0.55);
+  box-sizing: border-box;
+  width: calc(340 * var(--u));
+  padding: calc(10 * var(--u)) calc(12 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background-color: rgba(14, 18, 24, 0.88);
+  border: calc(1 * var(--u)) solid rgba(0, 0, 0, 0.1);
+  color: rgba(236, 241, 246, 0.92);
+  font-size: calc(12 * var(--u));
+  font-weight: 600;
+  line-height: 1.25;
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+  transition: opacity 0.22s ease, transform 0.3s var(--ease), visibility 0s;
+}
+#batc-pill-panel.is-closed {
+  opacity: 0;
+  transform: translateY(calc(-6 * var(--u))) scale(0.97);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.22s ease, transform 0.3s var(--ease), visibility 0s linear 0.3s;
+}
+#batc-pill-panel[data-edge="bottom"].is-closed { transform: translateY(calc(6 * var(--u))) scale(0.97); }
+.bm-head { display: flex; align-items: center; margin-bottom: calc(8 * var(--u)); }
+.bm-tabs, .bm-seg { display: flex; flex: 1 1 auto; }
+.bm-seg { margin-bottom: calc(4 * var(--u)); }
+.bm-seg .bm-tab { padding: calc(4 * var(--u)) 0; font-size: calc(11 * var(--u)); }
+.bm-tab {
+  position: relative;
+  flex: 1 1 0;
+  margin-right: calc(2 * var(--u));
+  padding: calc(5 * var(--u)) 0;
+  border-radius: calc(5 * var(--u));
+  background-color: var(--btn);
+  color: var(--dim);
+  text-align: center;
+  cursor: pointer;
+}
+.bm-tab:last-child { margin-right: 0; }
+.bm-tab:hover { background-color: var(--btn-hover); color: #ffffff; }
+.bm-tab.is-on { background-color: var(--on); color: #0e1218; }
+.bm-badge {
+  position: absolute; top: calc(-3 * var(--u)); right: calc(-2 * var(--u));
+  width: calc(8 * var(--u)); height: calc(8 * var(--u)); border-radius: 50%; background-color: #ffb547;
+}
+.bm-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: calc(24 * var(--u)); height: calc(24 * var(--u)); margin-left: calc(4 * var(--u));
+  border-radius: 50%; color: var(--dim); cursor: pointer;
+}
+.bm-icon:hover { background-color: var(--btn-hover); color: #ffffff; }
+.bm-icon svg { width: calc(12 * var(--u)); height: calc(12 * var(--u)); }
+.bm-note { margin-top: calc(6 * var(--u)); color: var(--dim); font-size: calc(10.5 * var(--u)); font-weight: 500; line-height: 1.35; }
+.bm-raw {
+  margin-top: calc(6 * var(--u)); padding: calc(6 * var(--u)); border-radius: calc(5 * var(--u));
+  background-color: var(--btn); font-family: "RobotoMono-Regular", monospace; font-size: calc(10 * var(--u));
+  font-weight: 400; white-space: pre-wrap; word-break: break-all;
+}
+.bm-rows { margin: 0 calc(-4 * var(--u)); }
+.bm-row {
+  display: flex; align-items: center; min-height: calc(28 * var(--u)); padding: 0 calc(6 * var(--u));
+  border-radius: calc(6 * var(--u)); cursor: pointer;
+}
+.bm-row:hover { background-color: var(--btn-hover); }
+.bm-row.is-active .bm-grow { color: var(--on); }
+.bm-grow { flex: 1 1 auto; }
+.bm-f { margin-left: calc(8 * var(--u)); color: var(--dim); font-size: calc(12 * var(--u)); font-weight: 500; }
+.bm-tag {
+  margin-left: calc(6 * var(--u)); padding: calc(3 * var(--u)) calc(5 * var(--u)); border-radius: calc(4 * var(--u));
+  font-size: calc(9.5 * var(--u)); line-height: 1;
+}
+.bm-tag.is-com1 { background-color: var(--on); color: #0e1218; }
+.bm-tag.is-com2 { border: calc(1 * var(--u)) solid var(--on); color: var(--on); }
+.bm-tag.is-ask { background-color: #ffb547; color: #15110a; }
+.bm-contact {
+  display: flex; align-items: center; margin-bottom: calc(8 * var(--u)); padding: calc(7 * var(--u)) calc(8 * var(--u));
+  border-radius: calc(7 * var(--u)); background-color: rgba(99, 211, 230, 0.1); border: calc(1 * var(--u)) solid rgba(99, 211, 230, 0.45);
+}
+.bm-contact .bm-grow { font-weight: 500; }
+.bm-go { flex: none; margin-left: calc(8 * var(--u)); white-space: nowrap; padding: calc(5 * var(--u)) calc(9 * var(--u)); border-radius: calc(5 * var(--u)); background-color: var(--on); color: #0e1218; cursor: pointer; }
+.bm-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: calc(6 * var(--u)); }
+.bm-sec { color: var(--dim); font-size: calc(10 * var(--u)); letter-spacing: 0.07em; text-transform: uppercase; }
+/* the whole history scrolls (wheel); it opens at the newest line */
+.bm-log { max-height: calc(300 * var(--u)); overflow-y: auto; margin: 0 calc(-2 * var(--u)); padding-right: calc(4 * var(--u)); }
+.bm-ln { display: flex; padding: calc(4 * var(--u)) calc(2 * var(--u)); font-size: calc(12 * var(--u)); font-weight: 400; line-height: 1.38; }
+.bm-t { flex: none; width: calc(38 * var(--u)); padding-top: calc(1 * var(--u)); color: rgba(236, 241, 246, 0.4); font-size: calc(10.5 * var(--u)); }
+.bm-x { flex: 1 1 auto; }
+.bm-w { margin-right: calc(4 * var(--u)); font-weight: 600; }
+.bm-ln.bm-atc .bm-w { color: #ffb547; }
+.bm-ln.bm-you .bm-w { color: #5fd38d; }
+.bm-ln.bm-traffic { color: rgba(236, 241, 246, 0.6); }
+.bm-ln.bm-traffic .bm-w { color: rgba(236, 241, 246, 0.5); }
+.bm-foot {
+  display: flex; justify-content: space-between; margin-top: calc(10 * var(--u)); padding-top: calc(8 * var(--u));
+  border-top: calc(1 * var(--u)) solid rgba(255, 255, 255, 0.1);
+}
+.bm-tog { display: flex; align-items: center; color: rgba(236, 241, 246, 0.85); cursor: pointer; }
+.bm-sw {
+  position: relative; width: calc(26 * var(--u)); height: calc(15 * var(--u)); margin-left: calc(7 * var(--u));
+  border-radius: calc(8 * var(--u)); background-color: var(--btn-hover); transition: background-color 0.2s ease;
+}
+.bm-sw i {
+  position: absolute; top: calc(2 * var(--u)); left: calc(2 * var(--u)); width: calc(11 * var(--u)); height: calc(11 * var(--u));
+  border-radius: 50%; background-color: rgba(236, 241, 246, 0.92); transition: transform 0.22s var(--ease);
+}
+.bm-tog.is-on .bm-sw { background-color: var(--on); }
+.bm-tog.is-on .bm-sw i { transform: translateX(calc(11 * var(--u))); background-color: #0e1218; }

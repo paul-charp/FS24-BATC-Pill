@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- README / flightsim.to comms shots: the real pill.js, fed a recorded exchange through a stand-in socket, on a
+     1080p page. ?panel opens the Frequencies panel instead of hovering the message. Rendered (and cropped to the
+     top-right corner) by docs/render_images.py. -->
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../src/html_ui/paul-batc-pill/pill.css">
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body { font-family: "Roboto", "Segoe UI", Arial, sans-serif; }
+  .sky { position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
+</style>
+<body class="live">
+<div class="sky"></div>
+<ui-resource-element name="MasterPage_InGame"></ui-resource-element>
+<script>
+  window.batcPillInlineCss = " "; // the <link> above already loads pill.css
+  // no BeyondATC here: an open socket that ignores what the pill sends
+  window.WebSocket = function () { this.readyState = 1; setTimeout(() => this.onopen && this.onopen(), 0); };
+  window.WebSocket.prototype.send = function () {};
+  window.WebSocket.prototype.close = function () {};
+</script>
+<script src="../../src/html_ui/paul-batc-pill/pill.js"></script>
+<script>
+  // from the 2026-10-22 sniffs: the IFR clearance request, the clearance, the readback menu
+  var panel = /[?&]panel\b/.test(location.search);
+  setTimeout(function () {
+    [
+      'LoadState: {"stage":"ready"}',
+      'Facility: Montpellier Ground (12L, 12R)|121.955',
+      'Progress: {"from":"LFMT","to":"LFML","pct":1.8}',
+      'Player: Montpellier Ground, Airfrans 1234, Airbus A320, Ramp F8, request IFR clearance to Marseille Provence airport, Information Y.',
+      'CommsState: {"mode":"speaking","text":"Speaking"}',
+      'CommsState: {"mode":"ready","text":""}',
+      'ATC: Airfrans 1234, Montpellier Ground, cleared to Marseille Provence via KELA8L departure, runway 12L, climb to FL060, squawk 1000.',
+      'CommsState: {"mode":"speaking","text":"Speaking"}',
+      'CommsState: {"mode":"ready","text":""}',
+      'InfoBoxes: [{"title":"Taxi to Runway","info":"12L"},{"title":"SID","info":"KELA8L"},{"title":"Altitude Clearance","info":"FL060"},{"title":"Squawk","info":"1000"}]',
+      'Actions: [Readback IFR Clearance¬Say Again¬]',
+    ].forEach(batcPill.feed);
+  }, 300);
+  setTimeout(function () {
+    if (panel) {
+      document.getElementById("batc-pill").click();
+      batcPill.feed('Frequencies: ' + JSON.stringify([
+        { name: "Montpellier Tower (12L, 12R)", type: "Tower", frequency: "118.775", cpdlcLogonCode: "" },
+        { name: "Montpellier Departure", type: "ApproachDeparture", frequency: "130.850", cpdlcLogonCode: "" },
+        { name: "Marseille Control", type: "Center", frequency: "132.365", cpdlcLogonCode: "" },
+        { name: "Montpellier Mediterranee Automated Terminal Information Service", type: "ATIS", frequency: "124.130", cpdlcLogonCode: "" },
+        { name: "Montpellier Delivery", type: "Clearance", frequency: "121.780", cpdlcLogonCode: "" },
+        { name: "Montpellier Ground", type: "Ground", frequency: "121.955", cpdlcLogonCode: "" },
+      ]));
+    } else {
+      // the cursor on the pill: the answers open under the message
+      var r = document.getElementById("batc-pill").getBoundingClientRect();
+      document.dispatchEvent(new MouseEvent("mousemove", { clientX: r.right - 20, clientY: r.top + r.height / 2 }));
+    }
+  }, 1600);
+</script>

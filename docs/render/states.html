@@ -23,7 +23,7 @@
     // shift the backdrop per tile so the sheet doesn't repeat one patch nine times
     t.style.backgroundPosition = (i % 3) * 50 + "% " + Math.floor(i / 3) * 40 + "%";
     t.style.backgroundSize = "300% 260%";
-    t.innerHTML = '<div class="slot">' + BP.pill(s[0], 2) + '</div><div class="cap"><b>' + s[3] + "</b><span>" + s[4] + "</span></div>";
+    t.innerHTML = '<div class="slot">' + BP.pill(s[0], 1.8) + '</div><div class="cap"><b>' + s[3] + "</b><span>" + s[4] + "</span></div>";
     grid.appendChild(t);
   });
 </script>

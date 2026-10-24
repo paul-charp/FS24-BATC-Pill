@@ -12,6 +12,7 @@ import os
 import socket
 import struct
 import sys
+import urllib.error
 import urllib.request
 
 HOST, PORT = "localhost", 19999
@@ -24,7 +25,7 @@ def pages():
 
 class WS:
     def __init__(self, path):
-        self.sock = socket.create_connection((HOST, PORT), timeout=20)
+        self.sock = socket.create_connection((HOST, PORT), timeout=5)
         key = base64.b64encode(os.urandom(16)).decode()
         self.sock.sendall((f"GET {path} HTTP/1.1\r\nHost: {HOST}:{PORT}\r\nUpgrade: websocket\r\n"
                            f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
@@ -37,12 +38,13 @@ class WS:
         if b" 101 " not in head.split(b"\r\n", 1)[0]:
             raise ConnectionError(head.split(b"\r\n", 1)[0].decode(errors="replace"))
         self.buf = head.split(b"\r\n\r\n", 1)[1]
+        self.sock.settimeout(30)  # a big --push evaluation can take a while to answer
 
-    def send(self, text):
-        data = text.encode()
+    def send(self, text, opcode=0x1):
+        data = text.encode() if isinstance(text, str) else text
         mask = os.urandom(4)
         n = len(data)
-        hdr = struct.pack("!B", 0x81) + (struct.pack("!B", 0x80 | n) if n < 126 else
+        hdr = struct.pack("!B", 0x80 | opcode) + (struct.pack("!B", 0x80 | n) if n < 126 else
                                           struct.pack("!BH", 0x80 | 126, n) if n < 65536 else
                                           struct.pack("!BQ", 0x80 | 127, n))
         self.sock.sendall(hdr + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(data)))
@@ -66,6 +68,14 @@ class WS:
             elif n == 127:
                 n = struct.unpack("!Q", self._read(8))[0]
             payload = self._read(n)
+            opcode = b0 & 0x0F
+            if opcode == 0x9:  # ping: answer it, or the server drops the connection
+                self.send(payload, 0xA)
+                continue
+            if opcode == 0xA:  # pong
+                continue
+            if opcode == 0x8:
+                raise ConnectionError("closed by server")
             msg += payload
             if b0 & 0x80:
                 return msg.decode(errors="replace")
@@ -105,6 +115,7 @@ def main():
         src = os.path.join(os.path.dirname(__file__), "..", "src", "html_ui", "paul-batc-pill")
         css = open(os.path.join(src, "pill.css"), encoding="utf-8").read()
         js = open(os.path.join(src, "pill.js"), encoding="utf-8").read()
+        js = js.replace("    devLog: false,", "    devLog: true,", 1)  # a dev build: streams to tools/pill_log.py
         args.expr = ("(function (css, js) {"
                      " if (window.batcPill) window.batcPill.destroy();"
                      " window.batcPillInlineCss = css; (0, eval)(js);"
@@ -120,4 +131,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        try:
+            main()
+        except urllib.error.URLError as e:  # urlopen wraps socket errors
+            raise e.reason if isinstance(e.reason, (ConnectionRefusedError, TimeoutError, socket.timeout)) else e
+    except ConnectionRefusedError:
+        sys.exit(f"inspect_ui: nothing listens on {HOST}:{PORT}. Is the sim running, with Developer Mode on?")
+    except (TimeoutError, socket.timeout, urllib.error.URLError) as e:
+        sys.exit(f"inspect_ui: the sim's UI debugger ({HOST}:{PORT}) isn't answering ({e}).\n"
+                 "A sim that froze or quit can leave the port held by a program it started (seen: SimAppPro2.exe).\n"
+                 "Check: netstat -ano | findstr 19999  (more than one LISTENING PID: end the one that isn't the sim,\n"
+                 "or the child of a dead one: Get-CimInstance Win32_Process -Filter \"ParentProcessId=<pid>\")")

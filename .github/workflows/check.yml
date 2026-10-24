@@ -26,6 +26,8 @@ jobs:
         run: |
           node --check src/html_ui/paul-batc-pill/pill.js
           node --check docs/render/pills.js
+          node --check tools/check_pill.js
+          node tools/check_pill.js
 
       - name: Python
         run: python -m py_compile tools/*.py docs/*.py
